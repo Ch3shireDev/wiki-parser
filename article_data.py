@@ -6,19 +6,29 @@ import re
 class ArticleData:
 
     def __init__(self, base_url, page_route):
+        self.url = page_route
         data = requests.get(base_url + page_route)
         self.bs = BeautifulSoup(data.text, 'html.parser')
         self.content = self.bs.find('div', {'id': 'content'})
 
     def get_dict(self):
         return {
+            'url': self.url,
+            'title': self.get_title(),
+            'content': self.get_first_paragraph(),
             'info': self.get_info(),
             'categories': list(self.get_categories()),
             'keywords': list(self.get_keywords())
         }
 
+    def get_title(self):
+        return self.bs.find('h1').text
+
     def get_info(self):
         infobox = self.content.find('table', {'class': 'infobox'})
+
+        if infobox is None:
+            return {}
 
         info_dict = {}
 
@@ -56,10 +66,10 @@ class ArticleData:
 
     def get_first_paragraph(self):
         paragraphs = self.content.find_all('p')
-        if len(paragraphs) > 0:
-            return paragraphs[0].text
-        else:
-            return ''
+        for paragraph in paragraphs:
+            if paragraph.text and paragraph.text.strip():
+                return paragraph.text.strip()
+        return ''
 
 
 class LinkData:
