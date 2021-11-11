@@ -4,17 +4,18 @@ import requests
 
 class CategoryData:
 
-    def __init__(self, base_url, route):
+    def __init__(self, base_url, prefix, route):
         self.base_url = base_url
+        self.prefix = prefix
         self.url = route
-        data = requests.get(self.base_url + route).text
+        data = requests.get(self.base_url + prefix + route).text
         self.bs = bs4.BeautifulSoup(data, "html.parser")
         self.links = list(self.get_links_internal())
 
     def get_dict(self):
         return {
             'url': self.url,
-            'title': self.get_title(),
+            'title': self.get_title().strip().replace('Category:', ''),
             'content': self.get_content().strip(),
             'articles': list(self.get_articles()),
             'categories': list(self.get_categories())
@@ -24,13 +25,21 @@ class CategoryData:
         for link in self.links:
             if not link['url'].startswith('/wiki/Category:'):
                 continue
-            yield link['url']
+            yield {
+                'url': link['url'].replace('/wiki/Category:', ''),
+                'title': link['title'].replace('Category:', ''),
+                'is_valid': link['url'].startswith('/wiki/Category:')
+            }
 
     def get_articles(self):
         for link in self.links:
             if link['url'].startswith('/wiki/Category:'):
                 continue
-            yield link['url']
+            yield {
+                'url': link['url'].replace('/wiki/', ''),
+                'title': link['title'],
+                'is_valid': link['url'].startswith('/wiki/')
+            }
 
     def get_title(self):
         return self.bs.find("h1", {"id": "firstHeading"}).text
@@ -84,15 +93,10 @@ class CategoryData:
         if next_page_link == None:
             return links
 
-        print(next_page_link)
-        links += list(self.get_links_from_next_page(next_page_link))
+        links += CategoryData(self.base_url, self.prefix, next_page_link).links
         return links
 
     def find_next_page_link(self):
         for link in self.bs.find_all("a"):
             if link.text == "next page":
                 return link.get("href")
-
-    def get_links_from_next_page(self, next_page_link):
-        bs = CategoryData(self.base_url, next_page_link)
-        return bs.get_links_internal()

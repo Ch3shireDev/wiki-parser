@@ -5,20 +5,22 @@ import re
 
 class ArticleData:
 
-    def __init__(self, base_url, page_route):
+    def __init__(self, base_url, prefix, page_route):
         self.url = page_route
-        data = requests.get(base_url + page_route)
+        self.prefix = prefix
+        data = requests.get(base_url + prefix + page_route)
         self.bs = BeautifulSoup(data.text, 'html.parser')
         self.content = self.bs.find('div', {'id': 'content'})
 
     def get_dict(self):
         return {
-            'url': self.url,
-            'title': self.get_title(),
-            'content': self.get_first_paragraph(),
+            'url': self.url.replace('/wiki/', ''),
+            'title': self.get_title().strip(),
+            'content': self.get_first_paragraph().strip(),
             'info': self.get_info(),
             'categories': list(self.get_categories()),
-            'keywords': list(self.get_keywords())
+            'keywords': list(self.get_keywords()),
+            'is_valid': self.url.startswith('/wiki/')
         }
 
     def get_title(self):
@@ -42,8 +44,9 @@ class ArticleData:
 
             label = label_element.text
             value = label_data.text.replace('\xa0', ' ')
+            value = label_data.text.replace('\n', ', ')
+            value = re.sub('\[\d+\]', ' ', value)
             value = re.sub('\s+', ' ', value)
-            value = re.sub('\[\d+\]', '', value)
 
             info_dict[label] = value
 
@@ -52,43 +55,53 @@ class ArticleData:
     def get_categories(self):
         keywords = self.content.find('div', {'id': 'mw-normal-catlinks'})
         keywords = keywords.find_all('a')
-        links = [LinkData(keyword) for keyword in keywords]
-        return [link for link in links if link.is_valid]
+        links = [KeywordData(keyword, self.url).get_dict()
+                 for keyword in keywords]
+        return [link for link in links if link['is_valid']]
 
     def get_keywords(self):
         paragraphs = self.content.find_all('p')
         for paragraph in paragraphs:
             keywords = paragraph.find_all('a')
             for keyword in keywords:
-                link = LinkData(keyword)
-                if link.is_valid:
-                    yield link
+                link_data = KeywordData(keyword, self.url)
+                if link_data.is_valid:
+                    yield link_data.get_dict()
 
     def get_first_paragraph(self):
         paragraphs = self.content.find_all('p')
         for paragraph in paragraphs:
             if paragraph.text and paragraph.text.strip():
-                return paragraph.text.strip()
+                p = paragraph.text.strip()
+                p = re.sub('\[\d+\]', '', p)
+                return p
         return ''
 
 
-class LinkData:
+class KeywordData:
 
-    def __init__(self, link_element):
+    def __init__(self, link_element, article_url):
+        self.article_url = article_url
         self.is_valid = 'title' in link_element.attrs
         if not self.is_valid:
             return
         self.text = link_element.text
-        self.link = link_element.attrs['href']
+        self.url = link_element.attrs['href']
         self.title = link_element.attrs['title']
+        if not self.url.startswith('/wiki/'):
+            self.is_valid = self.url.startswith('/wiki/')
+
+        if '(page does not exist)' in self.title:
+            self.is_valid = False
 
     def __repr__(self):
-        return f'{self.text} ({self.link})'
+        return f'{self.text} ({self.url})'
 
+    def get_dict(self):
 
-if __name__ == '__main__':
-    base_url = 'https://en.wikipedia.org'
-    page_url = '/wiki/Blender_(software)'
-
-    page = ArticleData(base_url, page_url).get_dict()
-    print(page)
+        return {
+            'url': self.url.replace('/wiki/', '').replace('Category:', ''),
+            'title': self.title,
+            'text': self.text,
+            'is_valid': self.is_valid
+        }
