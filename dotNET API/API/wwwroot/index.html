@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://unpkg.com/vue@next"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="app.js" defer></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+    <link href="style.css" rel="stylesheet">
+
+</head>
+
+<body id="app" class="d-flex flex-column">
+
+    <nav class="navbar navbar-dark bg-dark px-3">
+        <a class="navbar-brand" href="#">
+            <h1>Do You Know The Tool...</h1>
+        </a>
+    </nav>
+
+    <div class="d-flex flex-grow-1 overflow-hidden">
+        <div class="flex-shrink sidebar" id="types">
+            <button v-for="type in types" v-bind:key="type.urlName" type="button" class="btn btn-primary m-1"
+                v-on:click="changeState(type)" v-bind:class="[type.selected ? 'btn-primary' : 'btn-secondary']">
+                {{type.name}} ({{type.count}})
+            </button>
+        </div>
+        <div class="flex-shrink sidebar" id="tags">
+            <button v-for="tag in tags" v-bind:key="tag.urlName" type="button" class="btn btn-primary m-1"
+                v-on:click="changeState(tag)" v-bind:class="[tag.selected ? 'btn-primary' : 'btn-secondary']">
+                {{tag.name}} ({{tag.count}})
+            </button>
+        </div>
+
+        <div class="flex-grow overflow-scroll">
+            <div v-for="element in elements" v-bind:key="element.urlName" class="card m-1">
+                <div class="card-body">
+                    <h5 class="card-title">{{element.name}}</h5>
+                    <p class="card-text">{{element.shortDescriptionOrTagLine}}</p>
+                    <!-- <a v-bind:href="element.url" class="btn btn-primary">Go to the page</a> -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+
+</html>
